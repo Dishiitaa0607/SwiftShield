@@ -708,6 +708,5 @@ Ensures trust through intelligent fraud detection mechanisms
 
 > **Team Name:** Se7en
 > **Institution:** Srm Institute of Science and Technology, Kattankulathur
-> **Hackathon:** Guidewire DEVTrails 2026
-> **Persona:** Swiggy Food Delivery — Chennai
+> 
 >
