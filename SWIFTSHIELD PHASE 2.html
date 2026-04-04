@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwiftShield — Phase 2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg:       #0d0f14;
+    --surface:  #161a22;
+    --card:     #1e2330;
+    --border:   #2a3040;
+    --border2:  #3a4458;
+    --text:     #e8eaf0;
+    --muted:    #7a8499;
+    --accent:   #3b82f6;
+    --accent2:  #60a5fa;
+    --green:    #22c55e;
+    --green-bg: #0f2a1a;
+    --amber:    #f59e0b;
+    --amber-bg: #2a1f08;
+    --red:      #ef4444;
+    --red-bg:   #2a0f0f;
+    --teal:     #14b8a6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── Layout ── */
+  .shell { display: flex; height: 100vh; overflow: hidden; }
+
+  .sidebar {
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .logo-mark { font-size: 18px; font-weight: 600; color: var(--accent2); letter-spacing: -0.5px; }
+  .logo-sub  { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px; cursor: pointer;
+    color: var(--muted); font-size: 13px; font-weight: 500;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .nav-item:hover  { color: var(--text); background: rgba(255,255,255,0.03); }
+  .nav-item.active { color: var(--accent2); border-left-color: var(--accent); background: rgba(59,130,246,0.08); }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .nav-worker {
+    margin-top: auto;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--accent); display: flex; align-items: center;
+    justify-content: center; font-size: 12px; font-weight: 600; color: #fff;
+    flex-shrink: 0;
+  }
+  .nav-worker-name { font-size: 12px; font-weight: 500; }
+  .nav-worker-id   { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  .main { flex: 1; overflow-y: auto; padding: 28px 32px; }
+
+  /* ── Screens ── */
+  .screen { display: none; }
+  .screen.active { display: block; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── Page header ── */
+  .page-hdr { margin-bottom: 24px; }
+  .page-hdr h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+  .page-hdr p  { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 14px; font-weight: 500; }
+
+  /* ── Grid ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+  /* ── Stat boxes ── */
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .stat-val { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; }
+  .stat-lbl { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .stat-val.green { color: var(--green); }
+  .stat-val.amber { color: var(--amber); }
+  .stat-val.blue  { color: var(--accent2); }
+
+  /* ── Form elements ── */
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .field input, .field select {
+    width: 100%; background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 8px; padding: 10px 12px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    outline: none; transition: border-color 0.15s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field select option { background: var(--surface); }
+
+  .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .zone-chip {
+    padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border2);
+    font-size: 12px; cursor: pointer; transition: all 0.15s; color: var(--muted);
+    user-select: none;
+  }
+  .zone-chip.selected { background: rgba(59,130,246,0.15); border-color: var(--accent); color: var(--accent2); }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 10px 20px; border-radius: 8px; border: none;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-ghost  { background: transparent; border: 1px solid var(--border2); color: var(--text); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent2); }
+  .btn-green { background: var(--green); color: #000; }
+  .btn-green:hover { background: #16a34a; }
+  .btn-red   { background: var(--red); color: #fff; }
+  .btn-sm    { padding: 6px 12px; font-size: 12px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-full  { width: 100%; justify-content: center; padding: 12px; }
+
+  /* ── Badge ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500;
+  }
+  .badge-green  { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+  .badge-amber  { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,0.25); }
+  .badge-red    { background: var(--red-bg);   color: var(--red);   border: 1px solid rgba(239,68,68,0.25); }
+  .badge-blue   { background: rgba(59,130,246,0.12); color: var(--accent2); border: 1px solid rgba(59,130,246,0.25); }
+  .badge-teal   { background: rgba(20,184,166,0.12); color: var(--teal);    border: 1px solid rgba(20,184,166,0.25); }
+
+  /* ── Risk bar ── */
+  .risk-bar-wrap { margin: 8px 0 4px; }
+  .risk-bar-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .risk-bar-fill  { height: 100%; border-radius: 3px; background: var(--amber); transition: width 0.6s ease; }
+
+  /* ── Tier cards ── */
+  .tier-card {
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .tier-card:hover   { border-color: var(--border2); }
+  .tier-card.sel     { border-color: var(--accent); background: rgba(59,130,246,0.07); }
+  .tier-radio        { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border2); margin-top: 2px; flex-shrink: 0; transition: all 0.15s; }
+  .tier-card.sel .tier-radio { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+  .tier-name  { font-size: 13px; font-weight: 600; }
+  .tier-price { font-size: 20px; font-weight: 600; color: var(--accent2); letter-spacing: -0.5px; }
+  .tier-max   { font-size: 11px; color: var(--muted); }
+  .tier-ai    { font-size: 10px; color: var(--green); background: var(--green-bg); padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+
+  /* ── Premium breakdown ── */
+  .breakdown-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .breakdown-row:last-child { border-bottom: none; font-weight: 600; font-size: 13px; }
+  .breakdown-row .lbl { color: var(--muted); }
+  .breakdown-row .val.pos { color: var(--text); }
+  .breakdown-row .val.neg { color: var(--green); }
+  .breakdown-row .val.tot { color: var(--accent2); }
+
+  /* ── Claims list ── */
+  .claim-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .claim-row:last-child { border-bottom: none; }
+  .claim-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .claim-icon.rain { background: rgba(59,130,246,0.15); }
+  .claim-icon.flood { background: rgba(20,184,166,0.15); }
+  .claim-icon.bandh { background: rgba(245,158,11,0.15); }
+  .claim-icon.outage { background: rgba(239,68,68,0.15); }
+  .claim-info { flex: 1; }
+  .claim-type  { font-size: 13px; font-weight: 500; }
+  .claim-date  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .claim-amt   { font-size: 15px; font-weight: 600; color: var(--green); }
+
+  /* ── Trigger cards ── */
+  .trigger-card {
+    border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .trigger-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .trigger-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .trigger-name { font-size: 13px; font-weight: 500; }
+  .trigger-src  { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: 'DM Mono', monospace; }
+  .trigger-interval { margin-left: auto; font-size: 11px; color: var(--muted); }
+
+  /* ── Alert box ── */
+  .alert {
+    border-radius: 8px; padding: 12px 14px;
+    display: flex; gap: 10px; align-items: flex-start;
+    font-size: 13px; margin-bottom: 16px;
+  }
+  .alert-icon { flex-shrink: 0; margin-top: 1px; }
+  .alert-warn { background: var(--amber-bg); border: 1px solid rgba(245,158,11,0.3); color: var(--amber); }
+  .alert-succ { background: var(--green-bg); border: 1px solid rgba(34,197,94,0.3); color: var(--green); }
+  .alert-info { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); color: var(--accent2); }
+
+  /* ── Timeline ── */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .tl-item { display: flex; gap: 12px; }
+  .tl-left { display: flex; flex-direction: column; align-items: center; }
+  .tl-dot  { width: 10px; height: 10px; border-radius: 50%; background: var(--border2); flex-shrink: 0; margin-top: 4px; }
+  .tl-dot.done { background: var(--green); }
+  .tl-dot.spin { background: var(--accent); animation: pulse 1s infinite; }
+  .tl-line { width: 1px; flex: 1; background: var(--border); margin: 4px 0; min-height: 20px; }
+  .tl-content { padding-bottom: 16px; }
+  .tl-label { font-size: 13px; font-weight: 500; }
+  .tl-time  { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── Registration ── */
+  .reg-shell { max-width: 480px; margin: 0 auto; padding: 40px 0; }
+  .reg-logo  { text-align: center; margin-bottom: 32px; }
+  .reg-logo h1 { font-size: 28px; font-weight: 600; color: var(--accent2); }
+  .reg-logo p  { color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+  /* ── Divider ── */
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 1000;
+    background: var(--card); border: 1px solid var(--border2);
+    border-radius: 10px; padding: 12px 16px;
+    font-size: 13px; max-width: 320px;
+    transform: translateY(20px); opacity: 0;
+    transition: all 0.3s ease; pointer-events: none;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.green { border-color: rgba(34,197,94,0.4); color: var(--green); }
+  #toast.amber { border-color: rgba(245,158,11,0.4); color: var(--amber); }
+
+  /* ── Demo screen ── */
+  .demo-btn {
+    width: 100%; padding: 14px; border-radius: 10px;
+    border: 1px solid var(--border2); background: var(--surface);
+    color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px;
+    font-weight: 500; cursor: pointer; text-align: left;
+    display: flex; align-items: center; gap: 12px; transition: all 0.15s;
+    margin-bottom: 10px;
+  }
+  .demo-btn:hover { border-color: var(--accent); background: rgba(59,130,246,0.06); }
+  .demo-trigger-icon { font-size: 20px; }
+
+  .mono { font-family: 'DM Mono', monospace; font-size: 12px; }
+  .scrollbox { max-height: 200px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+  .log-line { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); margin-bottom: 4px; }
+  .log-line.ok  { color: var(--green); }
+  .log-line.err { color: var(--red); }
+  .log-line.hi  { color: var(--accent2); }
+
+  .pbar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin: 8px 0; }
+  .pbar-fill { height: 100%; border-radius: 2px; background: var(--accent); width: 0; transition: width 0.5s ease; }
+
+  /* Policy status banner */
+  .policy-banner {
+    border-radius: 10px; padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .policy-banner.active { background: var(--green-bg); border: 1px solid rgba(34,197,94,0.25); }
+  .policy-banner.none   { background: var(--amber-bg); border: 1px solid rgba(245,158,11,0.25); }
+
+  /* Separator */
+  .sep { color: var(--border2); margin: 0 6px; }
+</style>
+</head>
+<body>
+
+<div class="shell" id="appShell" style="display:none">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">SwiftShield</div>
+      <div class="logo-sub">Phase 2 · Live Demo</div>
+    </div>
+    <div class="nav-item active" onclick="nav('dashboard')">
+      <div class="nav-dot"></div> Dashboard
+    </div>
+    <div class="nav-item" onclick="nav('policy')">
+      <div class="nav-dot"></div> Policy
+    </div>
+    <div class="nav-item" onclick="nav('premium')">
+      <div class="nav-dot"></div> Premium Engine
+    </div>
+    <div class="nav-item" onclick="nav('claims')">
+      <div class="nav-dot"></div> Claims
+    </div>
+    <div class="nav-item" onclick="nav('triggers')">
+      <div class="nav-dot"></div> Triggers
+    </div>
+    <div class="nav-item" onclick="nav('demo')">
+      <div class="nav-dot"></div> Simulate Disruption
+    </div>
+    <div class="nav-worker">
+      <div class="avatar" id="sideAvatar">K</div>
+      <div>
+        <div class="nav-worker-name" id="sideWorkerName">Karthi</div>
+        <div class="nav-worker-id" id="sideWorkerId">SW-CHN-448271</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="screen active" id="screen-dashboard">
+      <div class="page-hdr">
+        <h1>Dashboard</h1>
+        <p id="dashGreeting">Good morning, Karthi — your coverage is active.</p>
+      </div>
+
+      <div id="policyBanner" class="policy-banner active">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--green)">Policy active · Full Shield</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px" id="bannerDates"></div>
+        </div>
+        <span class="badge badge-green" id="bannerDaysLeft">6 days left</span>
+      </div>
+
+      <div class="grid-4" style="margin-bottom:20px">
+        <div class="stat">
+          <div class="stat-val green" id="dashProtected">₹3,000</div>
+          <div class="stat-lbl">Protected this week</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val blue" id="dashPaidOut">₹0</div>
+          <div class="stat-lbl">Paid out this month</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val amber" id="dashPremium">₹56</div>
+          <div class="stat-lbl">This week's premium</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" id="dashRisk">7.2</div>
+          <div class="stat-lbl">Risk score / 10</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Recent Payouts</div>
+          <div id="recentClaims">
+            <div style="color:var(--muted);font-size:13px;padding:16px 0;text-align:center">No payouts yet this week.<br>Simulate a disruption to see this in action.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Zone Risk — Semmencherry / Perumbakkam</div>
+          <div style="margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+              <span>Flood risk index</span><span class="mono" style="color:var(--amber)">0.85</span>
+            </div>
+            <div class="risk-bar-track"><div class="risk-bar-fill" style="width:85%;background:var(--amber)"></div></div>
+          </div>
+          <div style="margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+              <span>Season risk (NE Monsoon)</span><span class="mono" style="color:var(--red)">High</span>
+            </div>
+            <div class="risk-bar-track"><div class="risk-bar-fill" style="width:92%;background:var(--red)"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+              <span>7-day rain probability</span><span class="mono" style="color:var(--amber)">74%</span>
+            </div>
+            <div class="risk-bar-track"><div class="risk-bar-fill" style="width:74%"></div></div>
+          </div>
+          <div class="divider"></div>
+          <div class="alert alert-warn" style="margin:0">
+            <div class="alert-icon">⚠</div>
+            <div>Heavy rain forecast tomorrow 4 PM in Semmencherry. Your coverage is active.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POLICY MANAGEMENT -->
+    <div class="screen" id="screen-policy">
+      <div class="page-hdr">
+        <h1>Insurance Policy Management</h1>
+        <p>Weekly coverage aligned to your Swiggy payout cycle.</p>
+      </div>
+
+      <div class="grid-2">
+        <!-- Current week policy -->
+        <div class="card">
+          <div class="card-title">This Week's Policy</div>
+          <div id="currentPolicyContent">
+            <div id="policyActive" style="display:none">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                <span class="badge badge-green">Active</span>
+                <span id="activeTierBadge" class="badge badge-blue">Full Shield</span>
+              </div>
+              <div class="breakdown-row"><span class="lbl">Coverage window</span><span id="coverageWindow" class="mono" style="font-size:11px"></span></div>
+              <div class="breakdown-row"><span class="lbl">Weekly premium</span><span id="activePremium" class="val pos"></span></div>
+              <div class="breakdown-row"><span class="lbl">Max payout</span><span id="activeMaxPayout" class="val pos"></span></div>
+              <div class="breakdown-row"><span class="lbl">Coverage hours/day</span><span id="activeCovHrs" class="val pos"></span></div>
+              <div class="breakdown-row"><span class="lbl">Days remaining</span><span id="activeDaysLeft" class="val pos"></span></div>
+            </div>
+            <div id="policyNone" style="padding:20px 0;text-align:center;color:var(--muted)">
+              <div style="font-size:32px;margin-bottom:8px">🛡</div>
+              <div>No active policy this week.</div>
+              <div style="font-size:12px;margin-top:4px">Select a tier below and pay to activate.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Policy history -->
+        <div class="card">
+          <div class="card-title">Policy History</div>
+          <div id="policyHistory">
+            <div style="color:var(--muted);font-size:12px">No previous policies.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tier selection -->
+      <div class="card" id="tierSection">
+        <div class="card-title">Purchase Weekly Coverage</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+          <div class="tier-card" id="tier-basic" onclick="selectTier('basic')">
+            <div class="tier-radio"></div>
+            <div>
+              <div class="tier-name">Basic Shield</div>
+              <div class="tier-price" id="price-basic">₹25</div>
+              <div class="tier-max">Max payout ₹800</div>
+            </div>
+          </div>
+          <div class="tier-card" id="tier-standard" onclick="selectTier('standard')">
+            <div class="tier-radio"></div>
+            <div>
+              <div class="tier-name">Standard Shield</div>
+              <div class="tier-price" id="price-standard">₹42</div>
+              <div class="tier-max">Max payout ₹1,800</div>
+            </div>
+          </div>
+          <div class="tier-card sel" id="tier-full" onclick="selectTier('full')">
+            <div class="tier-radio"></div>
+            <div>
+              <div style="display:flex;align-items:center">
+                <div class="tier-name">Full Shield</div>
+                <span class="tier-ai">AI pick</span>
+              </div>
+              <div class="tier-price" id="price-full">₹56</div>
+              <div class="tier-max">Max payout ₹3,000</div>
+              <div style="font-size:11px;color:var(--teal);margin-top:4px">+2 hrs coverage this week</div>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" id="payBtn" onclick="purchasePolicy()">
+          Pay ₹<span id="payAmount">56</span> via UPI (Razorpay Test Mode)
+        </button>
+        <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px">GPay · PhonePe · Paytm · UPI</div>
+      </div>
+    </div>
+
+    <!-- PREMIUM ENGINE -->
+    <div class="screen" id="screen-premium">
+      <div class="page-hdr">
+        <h1>Dynamic Premium Engine</h1>
+        <p>XGBoost model calculates Karthi's weekly premium from hyper-local risk factors.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Adjust Risk Inputs</div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Zone flood index</label>
+            <input type="range" id="floodIdx" min="0" max="100" value="85" oninput="recalcPremium()">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+              <span>Low risk (Navalur 0.30)</span><span id="floodVal" class="mono">0.85</span><span>High risk (Semm. 0.85)</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>7-day rain probability</label>
+            <input type="range" id="rainProb" min="0" max="100" value="74" oninput="recalcPremium()">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+              <span>Clear week (0%)</span><span id="rainVal" class="mono">74%</span><span>Heavy rain (100%)</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Season</label>
+            <select id="seasonSel" onchange="recalcPremium()">
+              <option value="monsoon" selected>NE Monsoon (Oct–Dec) — ×1.5</option>
+              <option value="summer">Summer (Apr–Jun) — ×1.2</option>
+              <option value="dry">Dry season — ×0.9</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Worker tenure (weeks)</label>
+            <input type="range" id="tenureWks" min="0" max="52" value="8" oninput="recalcPremium()">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+              <span>New (0 wks)</span><span id="tenureVal" class="mono">8 weeks</span><span>Veteran (52 wks)</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Claims in last 8 weeks</label>
+            <input type="range" id="claimHist" min="0" max="8" value="2" step="1" oninput="recalcPremium()">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+              <span>0 claims</span><span id="claimHistVal" class="mono">2 claims</span><span>8 claims</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Daily income average (₹)</label>
+            <input type="range" id="dailyInc" min="400" max="1500" value="900" step="50" oninput="recalcPremium()">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+              <span>₹400</span><span id="dailyIncVal" class="mono">₹900</span><span>₹1,500</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Premium Breakdown (All Tiers)</div>
+          <div id="premiumTable"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">ML Model Output</div>
+          <div style="margin-bottom:16px">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Selected tier premium</div>
+            <div style="font-size:40px;font-weight:600;color:var(--accent2);letter-spacing:-1px" id="bigPremium">₹56</div>
+            <div style="font-size:12px;color:var(--muted)" id="premBreakdownText"></div>
+          </div>
+          <div class="divider"></div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Coverage hours / day</div>
+          <div style="font-size:20px;font-weight:600" id="coverageHrsDisplay">14 hrs</div>
+          <div style="font-size:11px;color:var(--teal);margin-top:2px" id="extCovNote">Extended due to high rain forecast</div>
+          <div class="divider"></div>
+          <div style="font-size:11px;color:var(--muted)">
+            Model: XGBoost Regressor · Features: zone flood index, season, rain forecast, AQI, tenure, claim history, daily income
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLAIMS -->
+    <div class="screen" id="screen-claims">
+      <div class="page-hdr">
+        <h1>Claims Management</h1>
+        <p>Zero-touch automated claims — Karthi never files anything manually.</p>
+      </div>
+
+      <div class="alert alert-info">
+        <div class="alert-icon">ℹ</div>
+        <div>All claims are auto-created when a trigger fires. Go to <strong>Simulate Disruption</strong> to see the full zero-touch flow in action.</div>
+      </div>
+
+      <!-- fraud engine explainer -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">3-Layer Fraud Engine</div>
+        <div class="grid-3">
+          <div style="padding:12px;border-radius:8px;background:var(--surface);border:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:600;color:var(--accent2);margin-bottom:6px">Layer 1 — Location</div>
+            <div style="font-size:12px;color:var(--muted)">GPS in zone · Cell tower cross-check · Motion detected · App active before trigger</div>
+          </div>
+          <div style="padding:12px;border-radius:8px;background:var(--surface);border:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:6px">Layer 2 — Anomaly</div>
+            <div style="font-size:12px;color:var(--muted)">Claim freq vs history · Multiple claims in 4 hrs · Ring detection (85%+ zone)</div>
+          </div>
+          <div style="padding:12px;border-radius:8px;background:var(--surface);border:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:6px">Layer 3 — Event</div>
+            <div style="font-size:12px;color:var(--muted)">2+ API sources confirm · Zone-wide order drop · Official alert cross-check</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          <div style="font-size:11px;padding:8px;border-radius:6px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);text-align:center">
+            <div style="color:var(--green);font-weight:600">0–30</div>
+            <div style="color:var(--muted)">Auto-approve</div>
+          </div>
+          <div style="font-size:11px;padding:8px;border-radius:6px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);text-align:center">
+            <div style="color:var(--accent2);font-weight:600">31–60</div>
+            <div style="color:var(--muted)">Approve + audit</div>
+          </div>
+          <div style="font-size:11px;padding:8px;border-radius:6px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);text-align:center">
+            <div style="color:var(--amber);font-weight:600">61–80</div>
+            <div style="color:var(--muted)">Hold → 1-tap</div>
+          </div>
+          <div style="font-size:11px;padding:8px;border-radius:6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);text-align:center">
+            <div style="color:var(--red);font-weight:600">81–100</div>
+            <div style="color:var(--muted)">Reject + appeal</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Claims History</div>
+        <div id="claimsList">
+          <div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">
+            No claims yet. Simulate a disruption to generate your first claim.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRIGGERS -->
+    <div class="screen" id="screen-triggers">
+      <div class="page-hdr">
+        <h1>Automated Trigger Monitors</h1>
+        <p>4 Celery background jobs polling external APIs every 5–15 minutes.</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+        <div class="trigger-card">
+          <div class="trigger-dot active"></div>
+          <div style="font-size:20px">🌧</div>
+          <div style="flex:1">
+            <div class="trigger-name">T1 — Heavy Rainfall</div>
+            <div class="trigger-src">OpenWeatherMap API · lat/lon bounding box</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">Threshold: &gt;40mm in 3 hours · Payout: ₹400–₹550</div>
+          </div>
+          <div class="trigger-interval">Every 15 min</div>
+        </div>
+        <div class="trigger-card">
+          <div class="trigger-dot active"></div>
+          <div style="font-size:20px">🌊</div>
+          <div style="flex:1">
+            <div class="trigger-name">T2 — Waterlogging / Flood Alert</div>
+            <div class="trigger-src">GCC / IMD Alert API (mock)</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">Threshold: Zone-level official alert issued · Payout: ₹600–₹800</div>
+          </div>
+          <div class="trigger-interval">Every 10 min</div>
+        </div>
+        <div class="trigger-card">
+          <div class="trigger-dot active"></div>
+          <div style="font-size:20px">🚧</div>
+          <div style="flex:1">
+            <div class="trigger-name">T3 — Bandh / Strike / Curfew</div>
+            <div class="trigger-src">NewsAPI.org · 2-source confirmation required</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">Threshold: 2+ verified sources · Payout: ₹600–₹800</div>
+          </div>
+          <div class="trigger-interval">Every 10 min</div>
+        </div>
+        <div class="trigger-card">
+          <div class="trigger-dot active"></div>
+          <div style="font-size:20px">📵</div>
+          <div style="flex:1">
+            <div class="trigger-name">T4 — Platform Outage (Swiggy)</div>
+            <div class="trigger-src">Swiggy Partner API (mock signal)</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px">Threshold: 0 assignments for 90+ min in peak hours · Payout: ₹250–₹400</div>
+          </div>
+          <div class="trigger-interval">Every 5 min</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">evaluate_trigger() Pipeline</div>
+        <div class="scrollbox">
+          <div class="log-line hi">→ Celery job fires on schedule</div>
+          <div class="log-line">→ check_[trigger](zones) polls external API</div>
+          <div class="log-line">→ threshold_crossed? NO → sleep until next poll</div>
+          <div class="log-line hi">→ threshold_crossed? YES → evaluate_trigger()</div>
+          <div class="log-line">→ policy_service.is_active(worker_id) → check policy</div>
+          <div class="log-line">→ fraud_engine.score() → 3-layer check</div>
+          <div class="log-line">→ score &lt; 60 → claims_service.auto_create()</div>
+          <div class="log-line">→ calculate_payout(daily_income, trigger_type)</div>
+          <div class="log-line">→ payment_service.send_upi() → Razorpay Test Mode</div>
+          <div class="log-line hi ok">→ notify(WhatsApp + FCM): "₹480 credited for rain disruption"</div>
+          <div class="log-line">→ dashboard updated — worker never opened the app</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEMO / SIMULATE -->
+    <div class="screen" id="screen-demo">
+      <div class="page-hdr">
+        <h1>Simulate Disruption</h1>
+        <p>Fire any trigger manually to demo the zero-touch claims pipeline end-to-end.</p>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="card-title">Choose Trigger to Fire</div>
+            <button class="demo-btn" onclick="runDemo('heavy_rain')">
+              <span class="demo-trigger-icon">🌧</span>
+              <div>
+                <div style="font-weight:600">T1 — Heavy Rainfall</div>
+                <div style="font-size:11px;color:var(--muted)">48mm detected in Semmencherry · Auto-pays ₹480</div>
+              </div>
+            </button>
+            <button class="demo-btn" onclick="runDemo('waterlogging')">
+              <span class="demo-trigger-icon">🌊</span>
+              <div>
+                <div style="font-weight:600">T2 — Waterlogging Alert</div>
+                <div style="font-size:11px;color:var(--muted)">GCC alert issued for Perumbakkam · Auto-pays ₹720</div>
+              </div>
+            </button>
+            <button class="demo-btn" onclick="runDemo('bandh_strike')">
+              <span class="demo-trigger-icon">🚧</span>
+              <div>
+                <div style="font-weight:600">T3 — Bandh / Strike</div>
+                <div style="font-size:11px;color:var(--muted)">2 news sources confirm Chennai bandh · Auto-pays ₹720</div>
+              </div>
+            </button>
+            <button class="demo-btn" onclick="runDemo('platform_outage')">
+              <span class="demo-trigger-icon">📵</span>
+              <div>
+                <div style="font-weight:600">T4 — Platform Outage</div>
+                <div style="font-size:11px;color:var(--muted)">Zero Swiggy orders 90+ min peak hours · Auto-pays ₹315</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="card-title">Zero-Touch Pipeline — Live</div>
+            <div class="pbar-wrap"><div class="pbar-fill" id="demoPbar"></div></div>
+            <div class="timeline" id="demoTimeline">
+              <div style="color:var(--muted);font-size:13px;padding:12px 0">Click a trigger on the left to run the simulation.</div>
+            </div>
+          </div>
+          <div class="card" id="demoResultCard" style="display:none">
+            <div class="card-title">Claim Result</div>
+            <div id="demoResultContent"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- REGISTRATION SCREEN -->
+<div id="regScreen">
+  <div class="reg-shell">
+    <div class="reg-logo">
+      <h1>SwiftShield 🛵</h1>
+      <p>AI-powered income protection for Swiggy delivery partners</p>
+      <p style="margin-top:6px;font-size:12px;color:var(--muted)">Semmencherry · Perumbakkam · Chennai</p>
+    </div>
+
+    <!-- Step 1: Identity -->
+    <div class="card" id="regStep1">
+      <div class="card-title">Registration — Step 1 of 3</div>
+      <div class="field">
+        <label>Swiggy Partner ID</label>
+        <input id="regPartnerId" type="text" placeholder="SW-CHN-XXXXXX" value="SW-CHN-448271">
+      </div>
+      <div class="field">
+        <label>Mobile Number</label>
+        <input id="regMobile" type="text" placeholder="+91 98400 00000" value="+91 98400 12345">
+      </div>
+      <div class="field">
+        <label>Your Name</label>
+        <input id="regName" type="text" placeholder="Full name" value="Karthikeyan R.">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="sendOTP()">Send OTP →</button>
+    </div>
+
+    <!-- Step 2: OTP -->
+    <div class="card" id="regStep2" style="display:none">
+      <div class="card-title">Registration — Step 2 of 3</div>
+      <div class="alert alert-info" style="margin-bottom:14px">
+        <div class="alert-icon">📱</div>
+        <div>OTP sent to <strong id="otpMobileDisplay"></strong><br><span style="font-size:11px">Dev mode — use any 6-digit code or <strong>000000</strong></span></div>
+      </div>
+      <div class="field">
+        <label>Enter OTP</label>
+        <input id="regOTP" type="text" placeholder="000000" maxlength="6" value="000000">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="verifyOTP()">Verify OTP →</button>
+      <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="backToStep1()">← Back</button>
+    </div>
+
+    <!-- Step 3: Zones -->
+    <div class="card" id="regStep3" style="display:none">
+      <div class="card-title">Registration — Step 3 of 3</div>
+      <div class="field">
+        <label>Primary Delivery Zones</label>
+        <div class="checkbox-group" id="zoneChips">
+          <div class="zone-chip selected" onclick="toggleZone(this,'semmencherry')">Semmencherry</div>
+          <div class="zone-chip selected" onclick="toggleZone(this,'perumbakkam')">Perumbakkam</div>
+          <div class="zone-chip" onclick="toggleZone(this,'sholinganallur')">Sholinganallur</div>
+          <div class="zone-chip" onclick="toggleZone(this,'navalur')">Navalur</div>
+          <div class="zone-chip" onclick="toggleZone(this,'velachery')">Velachery</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Average Daily Earnings (₹)</label>
+        <input id="regIncome" type="number" value="900" min="300" max="2000">
+      </div>
+      <div class="field">
+        <label>Weeks on Swiggy platform</label>
+        <input id="regTenure" type="number" value="8" min="0" max="200">
+      </div>
+      <button class="btn btn-green btn-full" onclick="completeRegistration()">Generate My Risk Profile →</button>
+    </div>
+
+    <!-- Risk Profile Result -->
+    <div class="card" id="regResult" style="display:none">
+      <div class="card-title">Your Risk Profile</div>
+      <div style="text-align:center;padding:10px 0 16px">
+        <div style="font-size:48px;font-weight:600;color:var(--amber)" id="riskScoreDisplay">7.2</div>
+        <div style="font-size:13px;color:var(--muted)">Risk Score / 10</div>
+        <div class="risk-bar-track" style="max-width:200px;margin:10px auto">
+          <div class="risk-bar-fill" id="riskBarFill" style="width:72%"></div>
+        </div>
+      </div>
+      <div id="riskDetail" style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:16px"></div>
+      <div class="alert alert-warn" id="recTierAlert">
+        <div class="alert-icon">🤖</div>
+        <div>AI recommends <strong>Full Shield</strong> for your zone and season.<br>Covers up to ₹3,000/week · ₹56 premium.</div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="enterApp()">Enter SwiftShield →</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════════
+const STATE = {
+  worker: null,
+  policy: null,
+  claims: [],
+  selectedTier: 'full',
+  selectedZones: ['semmencherry', 'perumbakkam'],
+};
+
+// ════════════════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════════════════
+function nav(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('screen-' + screen).classList.add('active');
+  const items = document.querySelectorAll('.nav-item');
+  const labels = ['dashboard','policy','premium','claims','triggers','demo'];
+  const idx = labels.indexOf(screen);
+  if (idx >= 0) items[idx].classList.add('active');
+  if (screen === 'premium') recalcPremium();
+  if (screen === 'policy')  renderPolicyScreen();
+  if (screen === 'claims')  renderClaimsList();
+  if (screen === 'dashboard') renderDashboard();
+}
+
+// ════════════════════════════════════════════════════════
+//  ML PREMIUM ENGINE (runs entirely in JS)
+// ════════════════════════════════════════════════════════
+const ZONE_PROFILES = {
+  semmencherry:   { flood: 0.85, aqi: 0.40 },
+  perumbakkam:    { flood: 0.80, aqi: 0.40 },
+  sholinganallur: { flood: 0.45, aqi: 0.50 },
+  navalur:        { flood: 0.30, aqi: 0.30 },
+  velachery:      { flood: 0.60, aqi: 0.60 },
+  tambaram:       { flood: 0.35, aqi: 0.40 },
+};
+
+const TIER_CFG = {
+  basic:    { base: 25, maxPayout: 800,  hrs: 10 },
+  standard: { base: 35, maxPayout: 1800, hrs: 12 },
+  full:     { base: 45, maxPayout: 3000, hrs: 12 },
+};
+
+function calcPremium(tier, zones, floodIdx, rainProb, season, tenureWks, claimHist, dailyInc) {
+  const cfg = TIER_CFG[tier];
+  const base = cfg.base;
+  const seasonAdj   = season === 'monsoon' ? 12 : (season === 'summer' ? 7 : 2);
+  const zoneAdj     = Math.round(floodIdx * 12 * 10) / 10;
+  const forecastAdj = Math.round(rainProb * 9 * 10)  / 10;
+  const aqiAdj      = Math.round(0.40 * 5 * 10) / 10;
+  const loyaltyDisc = tenureWks >= 12 ? -5 : (tenureWks >= 4 ? -3 : 0);
+  const claimPen    = Math.min(claimHist * 1.5, 8);
+  let premium = base + zoneAdj + seasonAdj + forecastAdj + aqiAdj + loyaltyDisc + claimPen;
+  premium = Math.max(20, Math.min(90, Math.round(premium)));
+
+  // Extended coverage if heavy rain forecast + full tier
+  let covHrs = cfg.hrs;
+  let extCov = false;
+  if (rainProb >= 0.70 && tier === 'full') { covHrs = 14; extCov = true; }
+
+  const bdText = `₹${base} base + ₹${zoneAdj} zone + ₹${seasonAdj} season + ₹${forecastAdj} forecast + ₹${aqiAdj} AQI ${loyaltyDisc < 0 ? '− ₹'+Math.abs(loyaltyDisc) : ''} loyalty + ₹${claimPen} claims = ₹${premium}/week`;
+
+  return { premium, maxPayout: cfg.maxPayout, covHrs, extCov, bdText,
+    breakdown: { base, zoneAdj, seasonAdj, forecastAdj, aqiAdj, loyaltyDisc, claimPen } };
+}
+
+function recalcPremium() {
+  const floodIdx  = parseInt(document.getElementById('floodIdx').value) / 100;
+  const rainProb  = parseInt(document.getElementById('rainProb').value) / 100;
+  const season    = document.getElementById('seasonSel').value;
+  const tenureWks = parseInt(document.getElementById('tenureWks').value);
+  const claimHist = parseInt(document.getElementById('claimHist').value);
+  const dailyInc  = parseInt(document.getElementById('dailyInc').value);
+
+  document.getElementById('floodVal').textContent   = floodIdx.toFixed(2);
+  document.getElementById('rainVal').textContent    = Math.round(rainProb * 100) + '%';
+  document.getElementById('tenureVal').textContent  = tenureWks + ' weeks';
+  document.getElementById('claimHistVal').textContent = claimHist + ' claims';
+  document.getElementById('dailyIncVal').textContent = '₹' + dailyInc;
+
+  const zones = STATE.selectedZones;
+
+  // Build comparison table
+  let tableHTML = '';
+  ['basic','standard','full'].forEach(t => {
+    const r = calcPremium(t, zones, floodIdx, rainProb, season, tenureWks, claimHist, dailyInc);
+    const isSelected = t === STATE.selectedTier;
+    tableHTML += `
+    <div style="background:${isSelected?'rgba(59,130,246,0.08)':'var(--surface)'};border:1px solid ${isSelected?'var(--accent)':'var(--border)'};border-radius:8px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:600;text-transform:capitalize">${t.replace('_',' ')} Shield</span>
+        <span style="font-size:18px;font-weight:700;color:var(--accent2)">₹${r.premium}/wk</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted)">Max payout ₹${r.maxPayout.toLocaleString()} · ${r.covHrs} hrs/day${r.extCov?' · <span style="color:var(--teal)">+2 hrs extended</span>':''}</div>
+    </div>`;
+  });
+  document.getElementById('premiumTable').innerHTML = tableHTML;
+
+  const sel = calcPremium(STATE.selectedTier, zones, floodIdx, rainProb, season, tenureWks, claimHist, dailyInc);
+  document.getElementById('bigPremium').textContent = '₹' + sel.premium;
+  document.getElementById('premBreakdownText').textContent = sel.bdText;
+  document.getElementById('coverageHrsDisplay').textContent = sel.covHrs + ' hrs';
+  document.getElementById('extCovNote').style.display = sel.extCov ? 'block' : 'none';
+
+  // Update pay button
+  document.getElementById('price-basic').textContent    = '₹' + calcPremium('basic',    zones, floodIdx, rainProb, season, tenureWks, claimHist, dailyInc).premium;
+  document.getElementById('price-standard').textContent = '₹' + calcPremium('standard', zones, floodIdx, rainProb, season, tenureWks, claimHist, dailyInc).premium;
+  document.getElementById('price-full').textContent     = '₹' + calcPremium('full',     zones, floodIdx, rainProb, season, tenureWks, claimHist, dailyInc).premium;
+  document.getElementById('payAmount').textContent      = calcPremium(STATE.selectedTier, zones, floodIdx, rainProb, season, tenureWks, claimHist, dailyInc).premium;
+  document.getElementById('dashPremium').textContent    = '₹' + sel.premium;
+}
+
+// ════════════════════════════════════════════════════════
+//  RISK SCORER (onboarding AI)
+// ════════════════════════════════════════════════════════
+function calcRiskScore(zones, tenureWks, season) {
+  const floodMax = Math.max(...zones.map(z => (ZONE_PROFILES[z] || {flood:0.5}).flood));
+  const isMonsoon = season === 'monsoon' ? 1 : 0;
+  const rainProb  = isMonsoon ? 0.75 : 0.35;
+  const aqiMax    = Math.max(...zones.map(z => (ZONE_PROFILES[z] || {aqi:0.4}).aqi));
+  const score     = Math.min(10, floodMax * 4 + isMonsoon * 2 + rainProb * 2 + aqiMax * 2);
+  const tier      = score >= 7 ? 'full' : (score >= 4 ? 'standard' : 'basic');
+  return { score: Math.round(score * 10) / 10, tier };
+}
+
+// ════════════════════════════════════════════════════════
+//  PAYOUT CALCULATOR
+// ════════════════════════════════════════════════════════
+const SEVERITY_MAP = {
+  heavy_rain:      0.50,
+  waterlogging:    0.80,
+  bandh_strike:    0.80,
+  platform_outage: 0.35,
+};
+
+function calcPayout(triggerType, dailyIncome, maxPayout) {
+  const factor = SEVERITY_MAP[triggerType] || 0.5;
+  return Math.min(Math.round(dailyIncome * factor), maxPayout);
+}
+
+// ════════════════════════════════════════════════════════
+//  FRAUD ENGINE (lightweight JS version)
+// ════════════════════════════════════════════════════════
+function fraudScore(workerId, triggerType, recentClaimCount) {
+  let score = 0;
+  const flags = [];
+  // Simulated checks — in production these hit real APIs
+  if (recentClaimCount > 4) { score += 20; flags.push('High claim frequency this week'); }
+  // Event always confirmed in demo
+  return { score, flags, action: score <= 30 ? 'auto_approved' : (score <= 60 ? 'auto_approved' : 'hold') };
+}
+
+// ════════════════════════════════════════════════════════
+//  REGISTRATION FLOW
+// ════════════════════════════════════════════════════════
+function sendOTP() {
+  const mobile = document.getElementById('regMobile').value.trim();
+  if (!mobile) { toast('Enter your mobile number', 'amber'); return; }
+  document.getElementById('otpMobileDisplay').textContent = mobile;
+  document.getElementById('regStep1').style.display = 'none';
+  document.getElementById('regStep2').style.display = 'block';
+  toast('OTP sent! Use 000000 in dev mode', 'green');
+}
+
+function backToStep1() {
+  document.getElementById('regStep2').style.display = 'none';
+  document.getElementById('regStep1').style.display = 'block';
+}
+
+function verifyOTP() {
+  const otp = document.getElementById('regOTP').value.trim();
+  if (otp.length !== 6) { toast('Enter a 6-digit OTP', 'amber'); return; }
+  document.getElementById('regStep2').style.display = 'none';
+  document.getElementById('regStep3').style.display = 'block';
+  toast('OTP verified!', 'green');
+}
+
+function toggleZone(el, zone) {
+  el.classList.toggle('selected');
+  if (el.classList.contains('selected')) {
+    if (!STATE.selectedZones.includes(zone)) STATE.selectedZones.push(zone);
+  } else {
+    STATE.selectedZones = STATE.selectedZones.filter(z => z !== zone);
+  }
+}
+
+function completeRegistration() {
+  const partnerId = document.getElementById('regPartnerId').value.trim() || 'SW-CHN-448271';
+  const name      = document.getElementById('regName').value.trim() || 'Karthi';
+  const income    = parseFloat(document.getElementById('regIncome').value) || 900;
+  const tenure    = parseInt(document.getElementById('regTenure').value) || 8;
+  const zones     = STATE.selectedZones.length ? STATE.selectedZones : ['semmencherry','perumbakkam'];
+
+  if (!zones.length) { toast('Select at least one delivery zone', 'amber'); return; }
+
+  const { score, tier } = calcRiskScore(zones, tenure, 'monsoon');
+
+  STATE.worker = { id: partnerId, name, mobile: document.getElementById('regMobile').value, zones, dailyIncome: income, tenureWeeks: tenure, riskScore: score, recommendedTier: tier };
+
+  document.getElementById('riskScoreDisplay').textContent = score.toFixed(1);
+  document.getElementById('riskBarFill').style.width = (score / 10 * 100) + '%';
+  document.getElementById('riskDetail').textContent = `Zones: ${zones.map(z=>z.charAt(0).toUpperCase()+z.slice(1)).join(', ')} · Tenure: ${tenure} weeks · Income avg: ₹${income}/day`;
+  document.getElementById('recTierAlert').innerHTML = `<div class="alert-icon">🤖</div><div>AI recommends <strong>${tier.charAt(0).toUpperCase()+tier.slice(1)} Shield</strong> for your zone and season.</div>`;
+
+  document.getElementById('regStep3').style.display = 'none';
+  document.getElementById('regResult').style.display = 'block';
+}
+
+function enterApp() {
+  document.getElementById('regScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'flex';
+
+  // Sidebar worker info
+  document.getElementById('sideWorkerName').textContent = STATE.worker.name;
+  document.getElementById('sideWorkerId').textContent   = STATE.worker.id;
+  document.getElementById('sideAvatar').textContent     = STATE.worker.name.charAt(0).toUpperCase();
+
+  // Auto-create a policy on entry for demo
+  createDefaultPolicy();
+  recalcPremium();
+  renderDashboard();
+  nav('dashboard');
+}
+
+// ════════════════════════════════════════════════════════
+//  POLICY
+// ════════════════════════════════════════════════════════
+function createDefaultPolicy() {
+  const now       = new Date();
+  const dayOfWeek = now.getDay();
+  const monday    = new Date(now); monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+  const sunday    = new Date(monday); sunday.setDate(monday.getDate() + 6);
+
+  const r = calcPremium('full', STATE.worker.zones, 0.85, 0.74, 'monsoon', STATE.worker.tenureWeeks, 0, STATE.worker.dailyIncome);
+  STATE.policy = {
+    id: 'POL-' + Date.now(),
+    tier: 'full',
+    status: 'active',
+    premium: r.premium,
+    maxPayout: r.maxPayout,
+    covHrs: r.covHrs,
+    weekStart: monday,
+    weekEnd: sunday,
+    breakdownText: r.bdText,
+  };
+}
+
+function selectTier(tier) {
+  STATE.selectedTier = tier;
+  ['basic','standard','full'].forEach(t => document.getElementById('tier-'+t).classList.remove('sel'));
+  document.getElementById('tier-'+tier).classList.add('sel');
+  recalcPremium();
+}
+
+function purchasePolicy() {
+  const btn = document.getElementById('payBtn');
+  btn.disabled = true; btn.textContent = 'Processing payment...';
+  setTimeout(() => {
+    const r = calcPremium(STATE.selectedTier, STATE.worker.zones, 0.85, 0.74, 'monsoon', STATE.worker.tenureWeeks, 0, STATE.worker.dailyIncome);
+    const now = new Date();
+    const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay()+6)%7));
+    const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+    STATE.policy = { id:'POL-'+Date.now(), tier:STATE.selectedTier, status:'active', premium:r.premium, maxPayout:r.maxPayout, covHrs:r.covHrs, weekStart:monday, weekEnd:sunday, breakdownText:r.bdText };
+    btn.disabled = false;
+    btn.innerHTML = 'Pay ₹<span id="payAmount">'+r.premium+'</span> via UPI (Razorpay Test Mode)';
+    toast('Policy activated! Covered up to ₹' + r.maxPayout.toLocaleString() + ' this week.', 'green');
+    addPolicyToHistory();
+    renderPolicyScreen();
+    renderDashboard();
+  }, 1200);
+}
+
+const _policyHistory = [];
+function addPolicyToHistory() {
+  if (STATE.policy) _policyHistory.unshift({...STATE.policy, purchasedAt: new Date()});
+}
+
+function renderPolicyScreen() {
+  const p = STATE.policy;
+  if (p && p.status === 'active') {
+    document.getElementById('policyActive').style.display = 'block';
+    document.getElementById('policyNone').style.display   = 'none';
+    document.getElementById('tierSection').style.display  = 'none';
+    const days = Math.max(0, Math.round((p.weekEnd - new Date()) / 86400000));
+    document.getElementById('activeTierBadge').textContent = p.tier.charAt(0).toUpperCase()+p.tier.slice(1)+' Shield';
+    document.getElementById('coverageWindow').textContent  = fmtDate(p.weekStart) + ' – ' + fmtDate(p.weekEnd);
+    document.getElementById('activePremium').textContent   = '₹' + p.premium + '/week';
+    document.getElementById('activeMaxPayout').textContent = '₹' + p.maxPayout.toLocaleString();
+    document.getElementById('activeCovHrs').textContent    = p.covHrs + ' hours';
+    document.getElementById('activeDaysLeft').textContent  = days + ' days';
+  } else {
+    document.getElementById('policyActive').style.display = 'none';
+    document.getElementById('policyNone').style.display   = 'block';
+    document.getElementById('tierSection').style.display  = 'block';
+  }
+
+  const histEl = document.getElementById('policyHistory');
+  if (_policyHistory.length === 0) {
+    histEl.innerHTML = '<div style="color:var(--muted);font-size:12px">No previous policies.</div>';
+  } else {
+    histEl.innerHTML = _policyHistory.map(p => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <div>
+          <div style="font-weight:500">${p.tier.charAt(0).toUpperCase()+p.tier.slice(1)} Shield</div>
+          <div style="color:var(--muted)">${fmtDate(p.weekStart)} – ${fmtDate(p.weekEnd)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="color:var(--accent2)">₹${p.premium}/wk</div>
+          <span class="badge badge-green" style="font-size:10px">Active</span>
+        </div>
+      </div>`).join('');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  DASHBOARD RENDER
+// ════════════════════════════════════════════════════════
+function renderDashboard() {
+  const p = STATE.policy;
+  if (p) {
+    document.getElementById('dashProtected').textContent = '₹' + p.maxPayout.toLocaleString();
+    const days = Math.max(0, Math.round((p.weekEnd - new Date()) / 86400000));
+    document.getElementById('bannerDaysLeft').textContent = days + ' days left';
+    document.getElementById('bannerDates').textContent    = fmtDate(p.weekStart) + ' – ' + fmtDate(p.weekEnd);
+    document.getElementById('policyBanner').className     = 'policy-banner active';
+    document.getElementById('dashGreeting').textContent   = `Good ${getGreeting()}, ${STATE.worker?.name || 'Karthi'} — your coverage is active.`;
+  }
+  const total = STATE.claims.filter(c=>c.status==='auto_approved').reduce((a,c)=>a+c.amount, 0);
+  document.getElementById('dashPaidOut').textContent = '₹' + total.toLocaleString();
+  document.getElementById('dashRisk').textContent    = STATE.worker?.riskScore?.toFixed(1) || '7.2';
+
+  const recentEl = document.getElementById('recentClaims');
+  const recent   = [...STATE.claims].reverse().slice(0, 4);
+  if (recent.length === 0) {
+    recentEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:16px 0;text-align:center">No payouts yet. Simulate a disruption to see this in action.</div>';
+  } else {
+    recentEl.innerHTML = recent.map(c => {
+      const icons = { heavy_rain:'🌧', waterlogging:'🌊', bandh_strike:'🚧', platform_outage:'📵' };
+      const cls   = { heavy_rain:'rain', waterlogging:'flood', bandh_strike:'bandh', platform_outage:'outage' };
+      const label = { heavy_rain:'Heavy rain', waterlogging:'Waterlogging', bandh_strike:'Bandh', platform_outage:'Platform outage' };
+      return `<div class="claim-row">
+        <div class="claim-icon ${cls[c.trigger]}">${icons[c.trigger]}</div>
+        <div class="claim-info">
+          <div class="claim-type">${label[c.trigger]}</div>
+          <div class="claim-date">${c.zone.charAt(0).toUpperCase()+c.zone.slice(1)} · ${c.time}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="claim-amt">₹${c.amount.toLocaleString()}</div>
+          <span class="badge badge-green" style="font-size:10px">Approved</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  CLAIMS LIST
+// ════════════════════════════════════════════════════════
+function renderClaimsList() {
+  const el = document.getElementById('claimsList');
+  if (STATE.claims.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">No claims yet. Simulate a disruption to generate your first claim.</div>';
+    return;
+  }
+  const icons = { heavy_rain:'🌧', waterlogging:'🌊', bandh_strike:'🚧', platform_outage:'📵' };
+  const cls   = { heavy_rain:'rain', waterlogging:'flood', bandh_strike:'bandh', platform_outage:'outage' };
+  const label = { heavy_rain:'Heavy rain', waterlogging:'Waterlogging alert', bandh_strike:'Bandh / Strike', platform_outage:'Platform outage' };
+  el.innerHTML = [...STATE.claims].reverse().map(c => `
+    <div class="claim-row">
+      <div class="claim-icon ${cls[c.trigger]}">${icons[c.trigger]}</div>
+      <div class="claim-info">
+        <div class="claim-type">${label[c.trigger]}</div>
+        <div class="claim-date">${c.zone.charAt(0).toUpperCase()+c.zone.slice(1)} · ${c.time} · Fraud score: ${c.fraudScore}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="claim-amt">+₹${c.amount.toLocaleString()}</div>
+        <span class="badge badge-green" style="font-size:10px">${c.status === 'auto_approved' ? 'Approved' : 'Under review'}</span>
+        ${c.upiRef ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace">${c.upiRef}</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════════
+//  DEMO / SIMULATE DISRUPTION
+// ════════════════════════════════════════════════════════
+const DEMO_SCENARIOS = {
+  heavy_rain: {
+    label: 'Heavy Rainfall — Semmencherry',
+    detail: 'OpenWeatherMap: 48mm rainfall detected in 3-hour window.',
+    zone: 'semmencherry',
+    steps: [
+      { label: 'Celery T1 job fires (15-min poll)', delay: 0 },
+      { label: 'OpenWeatherMap: 48mm > 40mm threshold ✓', delay: 700 },
+      { label: 'Policy active this week ✓', delay: 1400 },
+      { label: 'Fraud engine: GPS in zone ✓ · Motion ✓ · Event confirmed ✓', delay: 2100 },
+      { label: 'Fraud score: 12 → Auto-approved', delay: 2800 },
+      { label: 'Claim created · Razorpay UPI payout initiated', delay: 3500 },
+      { label: 'WhatsApp sent: "₹480 credited for rain disruption"', delay: 4200 },
+      { label: 'Dashboard updated · Karthi never opened the app', delay: 4900 },
+    ]
+  },
+  waterlogging: {
+    label: 'Waterlogging Alert — Perumbakkam',
+    detail: 'GCC/IMD API: Zone-level waterlogging alert issued.',
+    zone: 'perumbakkam',
+    steps: [
+      { label: 'Celery T2 job fires (10-min poll)', delay: 0 },
+      { label: 'GCC/IMD API: Waterlogging alert for Perumbakkam ✓', delay: 700 },
+      { label: 'Policy active this week ✓', delay: 1400 },
+      { label: 'Fraud engine: All checks pass (score: 8)', delay: 2100 },
+      { label: 'Full-day payout triggered (severity: 0.80)', delay: 2800 },
+      { label: 'Razorpay UPI transfer: ₹720 initiated', delay: 3500 },
+      { label: 'WhatsApp: "₹720 credited. Roads impassable in your zone."', delay: 4200 },
+    ]
+  },
+  bandh_strike: {
+    label: 'Bandh / Strike — Chennai',
+    detail: 'NewsAPI.org: 2 verified sources confirm zone-level bandh.',
+    zone: 'semmencherry',
+    steps: [
+      { label: 'Celery T3 job fires (10-min poll)', delay: 0 },
+      { label: 'NewsAPI: Source 1 — "Bandh called in Chennai" ✓', delay: 700 },
+      { label: 'NewsAPI: Source 2 — "Delivery suspended in OMR corridor" ✓', delay: 1200 },
+      { label: '2-source confirmation threshold met ✓', delay: 1700 },
+      { label: 'Policy active ✓ · Fraud score: 5 → Auto-approved', delay: 2400 },
+      { label: 'Full-day payout: ₹720 (severity 0.80 × ₹900)', delay: 3100 },
+      { label: 'Razorpay UPI payout + WhatsApp notification sent', delay: 3800 },
+    ]
+  },
+  platform_outage: {
+    label: 'Platform Outage — Swiggy',
+    detail: 'Swiggy mock signal: 0 order assignments for 95 min during peak hours.',
+    zone: 'semmencherry',
+    steps: [
+      { label: 'Celery T4 job fires (5-min poll) — Peak hour window active', delay: 0 },
+      { label: 'Swiggy signal: 0 orders in zone (min 15 of monitoring)', delay: 700 },
+      { label: 'Counter: 95 min of zero assignments > 90 min threshold ✓', delay: 1400 },
+      { label: 'Zone-wide outage confirmed (not single worker) ✓', delay: 2100 },
+      { label: 'Fraud score: 10 → Auto-approved', delay: 2800 },
+      { label: 'Peak-hour payout: ₹315 (severity 0.35 × ₹900)', delay: 3500 },
+      { label: 'Razorpay UPI transfer initiated · FCM push sent', delay: 4200 },
+    ]
+  }
+};
+
+const PAYOUT_AMTS = { heavy_rain: 480, waterlogging: 720, bandh_strike: 720, platform_outage: 315 };
+const FRAUD_SCORES = { heavy_rain: 12, waterlogging: 8, bandh_strike: 5, platform_outage: 10 };
+
+function runDemo(triggerType) {
+  if (!STATE.policy) {
+    toast('No active policy! Purchase a policy first.', 'amber');
+    nav('policy'); return;
+  }
+
+  const scenario = DEMO_SCENARIOS[triggerType];
+  const amount   = PAYOUT_AMTS[triggerType];
+  const fscore   = FRAUD_SCORES[triggerType];
+  const pbar     = document.getElementById('demoPbar');
+  const tl       = document.getElementById('demoTimeline');
+  const resultCard = document.getElementById('demoResultCard');
+
+  pbar.style.width = '0%';
+  resultCard.style.display = 'none';
+  tl.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-family:'DM Mono',monospace">${scenario.detail}</div>`;
+
+  const total = scenario.steps[scenario.steps.length - 1].delay + 600;
+
+  scenario.steps.forEach((step, i) => {
+    setTimeout(() => {
+      const pct = Math.round((i + 1) / scenario.steps.length * 100);
+      pbar.style.width = pct + '%';
+
+      const isLast = i === scenario.steps.length - 1;
+      const dot    = isLast ? 'done' : (i === scenario.steps.length - 2 ? 'spin' : 'done');
+      const item   = document.createElement('div');
+      item.className = 'tl-item';
+      item.innerHTML = `
+        <div class="tl-left">
+          <div class="tl-dot ${dot}"></div>
+          ${!isLast ? '<div class="tl-line"></div>' : ''}
+        </div>
+        <div class="tl-content">
+          <div class="tl-label">${step.label}</div>
+          <div class="tl-time">${new Date().toLocaleTimeString()}</div>
+        </div>`;
+      tl.appendChild(item);
+      item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, step.delay);
+  });
+
+  setTimeout(() => {
+    const now = new Date();
+    const upiRef = 'UPI_' + triggerType.slice(0,3).toUpperCase() + '_' + Math.floor(Math.random()*900+100);
+
+    STATE.claims.push({
+      id:         'CLM-' + Date.now(),
+      trigger:    triggerType,
+      zone:       scenario.zone,
+      amount,
+      status:     'auto_approved',
+      fraudScore: fscore,
+      time:       now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),
+      upiRef,
+    });
+
+    resultCard.style.display = 'block';
+    document.getElementById('demoResultContent').innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div style="font-size:36px;font-weight:700;color:var(--green)">₹${amount.toLocaleString()}</div>
+        <div>
+          <span class="badge badge-green">Auto-approved</span>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;font-family:'DM Mono',monospace">${upiRef}</div>
+        </div>
+      </div>
+      <div class="breakdown-row"><span class="lbl">Trigger</span><span>${scenario.label}</span></div>
+      <div class="breakdown-row"><span class="lbl">Fraud score</span><span style="color:var(--green)">${fscore} / 100 — Clean</span></div>
+      <div class="breakdown-row"><span class="lbl">Processing time</span><span style="color:var(--green)">&lt; 90 seconds</span></div>
+      <div class="breakdown-row"><span class="lbl">Worker action needed</span><span style="color:var(--green)">None — fully automatic</span></div>
+      <div class="divider"></div>
+      <div class="alert alert-succ" style="margin:0">
+        <div class="alert-icon">✓</div>
+        <div>₹${amount} credited to ${STATE.worker?.name || 'Karthi'}'s UPI. WhatsApp + FCM push sent. ${STATE.worker?.name || 'Karthi'} never opened the app.</div>
+      </div>`;
+
+    renderDashboard();
+    renderClaimsList();
+    toast(`₹${amount} payout for ${triggerType.replace(/_/g,' ')}`, 'green');
+  }, total);
+}
+
+// ════════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════════
+function fmtDate(d) {
+  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+function getGreeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+}
+function toast(msg, type='green') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'show ' + type;
+  setTimeout(() => t.className = '', 3000);
+}
+
+// ════════════════════════════════════════════════════════
+//  INIT — auto-fill demo worker on load
+// ════════════════════════════════════════════════════════
+window.onload = function() {
+  // Pre-fill the registration for quick demo
+};
+</script>
+</body>
+</html>
